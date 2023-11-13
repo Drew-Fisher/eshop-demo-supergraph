@@ -1,29 +1,44 @@
-from ariadne import QueryType, graphql_sync, make_executable_schema, load_schema_from_path
+import json
+
+from ariadne import QueryType, MutationType, graphql_sync, make_executable_schema, load_schema_from_path
 from ariadne.explorer import ExplorerGraphiQL
 from flask import Flask, jsonify, request
+from ariadne.contrib.federation import make_federated_schema, FederatedObjectType
 import os
 from google.cloud import pubsub_v1
 
 query = QueryType()
+mutation = MutationType()
 
-type_defs = """
-    type Query {
-        hello: String!
-        test:String
-    }
-"""
+type_defs = load_schema_from_path("D:\Code\Work_Code\eshop-demo\python-service\src\schema.graphqls")
+product = FederatedObjectType("Product")
+
+@product.reference_resolver
+def resolve_product_reference(_, _info, representation):
+    return "sku"
 
 @query.field("hello")
 def resolve_hello(_, info):
     publisher = pubsub_v1.PublisherClient()
-    topic = 'projects/pubsubproducts/topics/Products22'
-    future = publisher.publish(topic, b'My first message!', spam='eggs')
+    topic = 'projects/pubsubproducts/topics/eshop_demo_products'
+    data = {
+        'sku': 'HX500'
+    }
+    data = json.dumps(data)
+    data_str = data
+    data = data_str.encode("utf-8")
+    future = publisher.publish(topic, data, name="product_created_event")
     future.result()
     return "hit"
 
+@mutation.field("createProduct")
+def resolve_create_product(_,info):
+    return "hit"
+
 # Use a raw string or double backslashes for the Windows path
-schema_path = r"D:\Code\Work_Code\eshop-demo\python-service\src\schema.graphql"
-schema = make_executable_schema(type_defs, query)
+schema_path = r"/src/schema.graphqls"
+#schema = make_executable_schema(type_defs, query)
+schema = make_federated_schema(type_defs)
 
 app = Flask(__name__)
 

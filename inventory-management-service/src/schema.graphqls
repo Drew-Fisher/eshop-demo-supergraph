@@ -1,0 +1,33 @@
+type Query {
+      hello: String
+}
+
+type Mutation {
+    createWearhouse(name: String!): wearhouse
+    createArea(name: String!, wearhouseId: String!): Area
+    createBay(name: String!, areaId: String!): Bay
+    addProduct(sku: String!, qty: Int!, bayId: String!): Product
+}
+
+type Product @key(fields: "sku"){
+    sku: String!
+    qty: Int!
+}
+
+type Wearhouse @key(fields: "id"){
+    id: String!
+    name: String!
+}
+
+type Area @key(fields: "id"){
+    id: String!
+    name: String!
+    wearhouse: Wearhouse
+}
+
+type bay @key(fields: "id"){
+    id: String!
+    name: String!
+    area: Area
+    Product: [Product]
+}
